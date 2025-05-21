@@ -117,59 +117,31 @@
       }
     };
 
-    document.getElementById("btnSetBrightness").onclick = async () => {
-  const brightness = Number(document.getElementById("brightnessInput").value);
-  try {
-    const res = await fetch("/light/brightness", {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ brightness })
-    });
-    if (!res.ok) throw await res.text();
-    alert("Natężenie światła ustawione.");
-  } catch (e) {
-    alert("Błąd ustawiania natężenia: " + e);
-  }
-};
-
-document.getElementById("btnSetColor").onclick = async () => {
-  const color = document.getElementById("colorSelect").value;
-  try {
-    const res = await fetch("/light/color", {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ color })
-    });
-    if (!res.ok) throw await res.text();
-    alert("Kolor światła zmieniony.");
-  } catch (e) {
-    alert("Błąd zmiany koloru: " + e);
-  }
-};
-
 
     // fetch on load
     fetchData();
   </script>
 
-<hr>
-<h2>Sterowanie światłem</h2>
+<h2>Światło – sterowanie bez JS</h2>
 
-<label>Natężenie światła (1-254):
-  <input type="number" id="brightnessInput" min="1" max="254">
-</label>
-<button id="btnSetBrightness">Ustaw natężenie</button>
+<form method="POST" action="/light/brightness_form">
+  <label>Natężenie (1–254):
+    <input type="number" name="brightness" min="1" max="254" required>
+  </label>
+  <button type="submit">Ustaw natężenie</button>
+</form>
 
-<label>Kolor światła:
-  <select id="colorSelect">
-    <option value="1">Niebieski</option>
-    <option value="2">Czerwony</option>
-    <option value="3">Zielony</option>
-    <option value="4">Żółty</option>
-  </select>
-</label>
-<button id="btnSetColor">Zmień kolor</button>
-
+<form method="POST" action="/light/color_form">
+  <label>Kolor:
+    <select name="color">
+      <option value="1">Niebieski</option>
+      <option value="2">Czerwony</option>
+      <option value="3">Zielony</option>
+      <option value="4">Żółty</option>
+    </select>
+  </label>
+  <button type="submit">Zmień kolor</button>
+</form>
 
 </body>
 </html>

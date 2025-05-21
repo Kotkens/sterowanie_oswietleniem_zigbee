@@ -157,32 +157,24 @@ def poll_esp():
 poll_thread = threading.Thread(target=poll_esp, daemon=True)
 poll_thread.start()
 
+@app.route("/light/brightness_form", methods=["POST"])
+def brightness_form():
+    brightness = request.form.get("brightness", type=int)
+    if brightness is None:
+        return "Brak wartości", 400
+    natezenie_swiatla(brightness)
+    return f"Ustawiono natężenie na {brightness}. <a href='/'>Powrót</a>"
+
+@app.route("/light/color_form", methods=["POST"])
+def color_form():
+    color = request.form.get("color")
+    if not color:
+        return "Brak koloru", 400
+    zmiana_koloru_swiatla(color)
+    return f"Zmieniono kolor na opcję {color}. <a href='/'>Powrót</a>"
+
 if __name__ == "__main__":
     # in prod, set debug=False
     app.run(host="0.0.0.0", port=5555, debug=False)
 
-@app.route("/light/brightness", methods=["POST"])
-@require_api_key
-def set_brightness():
-    data = request.get_json()
-    if not data or "brightness" not in data:
-        return jsonify({"error": "Missing brightness value"}), 400
-    try:
-        natezenie = int(data["brightness"])
-        natezenie_swiatla(natezenie)
-        return jsonify({"status": "Brightness updated"}), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
-
-@app.route("/light/color", methods=["POST"])
-@require_api_key
-def set_color():
-    data = request.get_json()
-    if not data or "color" not in data:
-        return jsonify({"error": "Missing color value"}), 400
-    try:
-        zmiana_koloru_swiatla(str(data["color"]))
-        return jsonify({"status": "Color updated"}), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
