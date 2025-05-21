@@ -44,7 +44,6 @@ def update_lamp(value):
 def zmien_stan_swiatla(state):
     state_value = "ON" if state in [True, "ON"] else "OFF"
     mqtt_client.publish(MQTT_TOPIC, json.dumps({"state": state_value}))
-    print(f"Wysłano komendę: {MQTT_TOPIC} -> {json.dumps({"state": state_value})}")
      
 def natezenie_swiatla(natezenie): # 254
     """
@@ -54,24 +53,21 @@ def natezenie_swiatla(natezenie): # 254
         mqtt_client.publish(MQTT_TOPIC, json.dumps({"brightness": natezenie}))
     else:
         return "Podane źle natężenie światła"
-    print(f"Wysłano komendę: {MQTT_TOPIC} -> {json.dumps({"brightness": natezenie})}")
     
 def zmiana_koloru_swiatla(kolor):
     """
     Zmienia kolor światła żarówki
     """
     match kolor:
-        case "1":
-            payload = json.dumps({"color": {"h": 240,"hue": 240,"s": 100,"saturation": 100,"x": 0.1355,"y": 0.0399}})
-        case "2":
-            payload = json.dumps({"color": {"h": 359,"hue": 359,"s": 100,"saturation": 100,"x": 0.6942,"y": 0.2963}})
-        case "3":
-            payload = json.dumps({"color": {"h": 123,"hue": 123,"s": 100,"saturation": 100,"x": 0.1704,"y": 0.709}})
-        case "4":
-            payload = json.dumps({"color": {"h": 43,"hue": 43,"s": 27,"saturation": 27,"x": 0.3497,"y": 0.3533 }})
+        case "1":  # niebieski z RGB (46,102,150)
+            payload = json.dumps({"color": {"h": 210,"hue": 210,"s": 69,"saturation": 69,"x": 0.169,"y": 0.118}})
+        case "2":  # czerwony
+            payload = json.dumps({"color": {"h": 0,"hue": 0,"s": 100,"saturation": 100,"x": 0.64,"y": 0.33}})
+        case "3":  # zielony
+            payload = json.dumps({"color": {"h": 120,"hue": 120,"s": 100,"saturation": 100,"x": 0.3,"y": 0.6}})
+        case "4":  # żółty
+           payload = json.dumps({"color": {"h": 50,"hue": 50,"s": 100,"saturation": 100,"x": 0.43,"y": 0.5}})
     mqtt_client.publish(MQTT_TOPIC, payload)
-    print(f"Wysłano komendę: {MQTT_TOPIC} -> {payload}")
-    
 
 # ---------------------------------
 
