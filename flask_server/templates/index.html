@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ESP Dashboard</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 2rem auto; }
+    label { display: block; margin-top: 1rem; }
+    input[type=number], select { width: 100%; padding: .4em; }
+    button { margin-top: 1.5rem; padding: .6em 1em; }
+    .row { display: flex; justify-content: space-between; }
+  </style>
+</head>
+<body>
+
+  <h1>ESP8266 Control Panel</h1>
+
+  <!-- API key prompt -->
+  <script>
+    let apiKey = localStorage.getItem("esp_api_key") || "";
+    if (!apiKey) {
+      apiKey = prompt("Enter your X-API-Key:");
+      localStorage.setItem("esp_api_key", apiKey);
+    }
+  </script>
+
+  <!-- Form fields -->
+  <div>
+    <label>Person count:
+      <input type="number" id="value" min="0">
+    </label>
+
+    <label>Direction:
+      <select id="direction">
+        <option value="0">0 (increment)</option>
+        <option value="1">1 (decrement)</option>
+      </select>
+    </label>
+
+    <label>Wait for next Sensor1 (ms):
+      <input type="number" id="waitForNextSensor1" min="0">
+    </label>
+
+    <label>Wait for next Sensor2 (ms):
+      <input type="number" id="waitForNextSensor2" min="0">
+    </label>
+
+    <label>Wait after reading Sensor1 (ms):
+      <input type="number" id="waitAfterReading1" min="0">
+    </label>
+
+    <label>Wait after reading Sensor2 (ms):
+      <input type="number" id="waitAfterReading2" min="0">
+    </label>
+
+    <div class="row">
+      <button id="btnFetch">Refresh</button>
+      <button id="btnUpdate">Update All</button>
+      <button id="btnReset">Reset Count</button>
+    </div>
+  </div>
+
+  <script>
+    const headers = { "Content-Type": "application/json", "X-API-Key": apiKey };
+    const fetchData = async () => {
+      try {
+        const res = await fetch("/count", { headers });
+        const j = await res.json();
+        document.getElementById("value").value = j.value;
+        document.getElementById("direction").value = j.direction;
+        document.getElementById("waitForNextSensor1").value = j.waitForNextSensor1;
+        document.getElementById("waitForNextSensor2").value = j.waitForNextSensor2;
+        document.getElementById("waitAfterReading1").value = j.waitAfterReading1;
+        document.getElementById("waitAfterReading2").value = j.waitAfterReading2;
+      } catch (e) {
+        alert("Error fetching data: " + e);
+      }
+    };
+
+    document.getElementById("btnFetch").onclick = fetchData;
+
+    document.getElementById("btnUpdate").onclick = async () => {
+      const payload = {
+        value: Number(document.getElementById("value").value),
+        direction: Number(document.getElementById("direction").value),
+        waitForNextSensor1: Number(document.getElementById("waitForNextSensor1").value),
+        waitForNextSensor2: Number(document.getElementById("waitForNextSensor2").value),
+        waitAfterReading1: Number(document.getElementById("waitAfterReading1").value),
+        waitAfterReading2: Number(document.getElementById("waitAfterReading2").value)
+      };
+      try {
+        const res = await fetch("/count", {
+          method: "POST",
+          headers,
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw await res.text();
+        alert("Updated successfully!");
+        fetchData();
+      } catch (e) {
+        alert("Error updating: " + e);
+      }
+    };
+
+    document.getElementById("btnReset").onclick = async () => {
+      try {
+        const res = await fetch("/count", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ value: 0 })
+        });
+        if (!res.ok) throw await res.text();
+        alert("Count reset to 0");
+        fetchData();
+      } catch (e) {
+        alert("Error resetting: " + e);
+      }
+    };
+
+    // fetch on load
+    fetchData();
+  </script>
+
+</body>
+</html>
