@@ -71,6 +71,8 @@ def zmiana_koloru_swiatla(kolor):
             payload = json.dumps({"color": {"h": 43,"hue": 43,"s": 27,"saturation": 27,"x": 0.3497,"y": 0.3533 }})
     mqtt_client.publish(MQTT_TOPIC, payload)
     print(f"Wysłano komendę: {MQTT_TOPIC} -> {payload}")
+    
+
 # ---------------------------------
 
 def require_api_key(fn):
@@ -158,3 +160,29 @@ poll_thread.start()
 if __name__ == "__main__":
     # in prod, set debug=False
     app.run(host="0.0.0.0", port=5555, debug=False)
+
+@app.route("/light/brightness", methods=["POST"])
+@require_api_key
+def set_brightness():
+    data = request.get_json()
+    if not data or "brightness" not in data:
+        return jsonify({"error": "Missing brightness value"}), 400
+    try:
+        natezenie = int(data["brightness"])
+        natezenie_swiatla(natezenie)
+        return jsonify({"status": "Brightness updated"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/light/color", methods=["POST"])
+@require_api_key
+def set_color():
+    data = request.get_json()
+    if not data or "color" not in data:
+        return jsonify({"error": "Missing color value"}), 400
+    try:
+        zmiana_koloru_swiatla(str(data["color"]))
+        return jsonify({"status": "Color updated"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
