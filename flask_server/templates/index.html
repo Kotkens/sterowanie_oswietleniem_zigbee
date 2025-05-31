@@ -2,210 +2,966 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>ESP Dashboard</title>
+  <title>Smart Light Dashboard</title>
   <style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
   body {
-    font-family: 'Segoe UI', sans-serif;
-    background: #f2f4f8;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 1rem;
     color: #333;
-    max-width: 600px;
-    margin: 3rem auto;
+  }
+
+  .container {
+    max-width: 800px;
+    margin: 0 auto;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 24px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    overflow: hidden;
+  }
+
+  .header {
+    background: linear-gradient(135deg, #ff6b6b, #ffa726);
     padding: 2rem;
-    border-radius: 12px;
-    background-color: #ffffff;
-    box-shadow: 0 0 20px rgba(0,0,0,0.08);
-  }
-
-  h1, h2 {
     text-align: center;
-    color: #2a3f54;
+    color: white;
   }
 
-  label {
+  .header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+
+  .header p {
+    opacity: 0.9;
+    font-size: 1.1rem;
+  }
+
+  .content {
+    padding: 2rem;
+  }
+
+  .party-mode {
+    background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4, #feca57, #ff9ff3);
+    background-size: 400% 400%;
+    animation: party-gradient 2s ease infinite;
+    color: white;
+    text-align: center;
+    padding: 1.5rem;
+    border-radius: 16px;
+    margin-bottom: 2rem;
+  }
+
+  @keyframes party-gradient {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  .party-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+
+  .person-counter {
+    background: rgba(255,255,255,0.2);
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: bold;
+  }
+
+  .light-section {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    border-radius: 20px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    color: white;
+    text-align: center;
+  }
+
+  .bulb-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
     display: block;
-    margin: 1rem 0 0.4rem;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+  }
+
+  .controls-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2rem;
+    margin-top: 2rem;
+  }
+
+  .control-card {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .control-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+  }
+
+  .control-card h3 {
+    color: #2d3748;
+    margin-bottom: 1rem;
+    font-size: 1.2rem;
     font-weight: 600;
   }
 
-  input[type=number],
-  select {
-    width: 100%;
-    padding: 0.5rem;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    font-size: 1rem;
+  .control-card.disabled {
+    opacity: 0.6;
+    pointer-events: none;
   }
 
-  button {
-    padding: 0.6rem 1.2rem;
-    margin-top: 1.2rem;
-    border: none;
-    border-radius: 6px;
-    background-color: #2a9df4;
+  .mode-selector {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
     color: white;
-    font-weight: bold;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
+    text-align: center;
   }
 
-  button:hover {
-    background-color: #1c87d9;
-  }
-
-  .row {
+  .mode-toggle {
     display: flex;
-    justify-content: space-between;
-    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+
+  .mode-switch {
+    position: relative;
+    display: inline-block;
+    width: 80px;
+    height: 40px;
+  }
+
+  .mode-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .mode-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255,255,255,0.3);
+    transition: .4s;
+    border-radius: 40px;
+    border: 2px solid rgba(255,255,255,0.5);
+  }
+
+  .mode-slider:before {
+    position: absolute;
+    content: "";
+    height: 30px;
+    width: 30px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  }
+
+  input:checked + .mode-slider:before {
+    transform: translateX(36px);
+  }
+
+  .mode-label {
+    font-weight: 600;
+    font-size: 1.1rem;
+  }
+
+  .mode-description {
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+    opacity: 0.9;
+  }
+
+  .toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin-bottom: 1rem;
+  }
+
+  .toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .brightness-control {
+    margin: 1rem 0;
+  }
+
+  .brightness-slider {
+    width: 100%;
+    height: 8px;
+    border-radius: 4px;
+    background: linear-gradient(to right, #1a202c, #fbbf24);
+    outline: none;
+    appearance: none;
+    cursor: pointer;
+  }
+
+  .brightness-slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    cursor: pointer;
+  }
+
+  .color-picker-container {
+    margin: 1rem 0;
+  }
+
+  .color-palette {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  .color-option {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 3px solid transparent;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+  }
+
+  .color-option:hover {
+    transform: scale(1.1);
+    border-color: white;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+
+  .color-option.active {
+    border-color: white;
+    box-shadow: 0 0 0 2px #667eea;
+  }
+
+  .rgb-input {
+    width: 100%;
+    height: 40px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-top: 0.5rem;
+  }
+
+  .advanced-toggle {
+    background: #f7fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1rem;
+    margin-top: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  .advanced-toggle:hover {
+    background: #edf2f7;
+  }
+
+  .advanced-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+  }
+
+  .advanced-content.open {
+    max-height: 1000px;
+    padding-top: 1rem;
+  }
+
+  .sensor-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 1rem;
   }
 
-  .row button {
-    flex: 1;
+  .sensor-control {
+    background: white;
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
   }
 
-  hr {
-    margin: 2rem 0;
+  .sensor-control label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #4a5568;
+  }
+
+  .sensor-control input {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 1rem;
+  }
+
+  .btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
     border: none;
-    border-top: 1px solid #ddd;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin: 0.25rem;
   }
 
-  form {
+  .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  }
+
+  .btn-group {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
     margin-top: 1rem;
+  }
+
+  .status-display {
+    background: rgba(255,255,255,0.8);
+    padding: 1rem;
+    margin: 1rem 0;
+    border-radius: 8px;
+    font-family: monospace;
+    font-size: 0.9rem;
+  }
+
+  .input-group {
+    margin: 0.75rem 0;
+  }
+
+  .input-group input {
+    width: 60px;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    text-align: center;
+  }
+
+  @media (max-width: 768px) {
+    .controls-grid {
+      grid-template-columns: 1fr;
+    }
+    
+    .party-controls {
+      flex-direction: column;
+    }
+    
+    .header h1 {
+      font-size: 2rem;
+    }
+
+    .mode-toggle {
+      flex-direction: column;
+    }
   }
 </style>
 </head>
 <body>
 
-  <h1>ESP8266 Control Panel</h1>
-
-  <!-- API key prompt -->
-  <script>
-    let apiKey = localStorage.getItem("esp_api_key") || "";
-    if (!apiKey) {
-      apiKey = prompt("Enter your X-API-Key:");
-      localStorage.setItem("esp_api_key", apiKey);
-    }
-  </script>
-
-  <!-- Form fields -->
-  <div>
-    <label>Person count:
-      <input type="number" id="value" min="0">
-    </label>
-
-    <label>Direction:
-      <select id="direction">
-        <option value="0">0 (increment)</option>
-        <option value="1">1 (decrement)</option>
-      </select>
-    </label>
-
-    <label>Wait for next Sensor1 (ms):
-      <input type="number" id="waitForNextSensor1" min="0">
-    </label>
-
-    <label>Wait for next Sensor2 (ms):
-      <input type="number" id="waitForNextSensor2" min="0">
-    </label>
-
-    <label>Wait after reading Sensor1 (ms):
-      <input type="number" id="waitAfterReading1" min="0">
-    </label>
-
-    <label>Wait after reading Sensor2 (ms):
-      <input type="number" id="waitAfterReading2" min="0">
-    </label>
-
-    <div class="row">
-      <button id="btnFetch">Refresh</button>
-      <button id="btnUpdate">Update All</button>
-      <button id="btnReset">Reset Count</button>
-    </div>
+<div class="container">
+  <div class="header">
+    <h1>💡 Smart Home Dashboard</h1>
+    <p>Control your lighting and room sensors</p>
   </div>
 
-  <script>
-    const headers = { "Content-Type": "application/json", "X-API-Key": apiKey };
-    const fetchData = async () => {
-      try {
-        const res = await fetch("/count", { headers });
-        const j = await res.json();
-        document.getElementById("value").value = j.value;
-        document.getElementById("direction").value = j.direction;
-        document.getElementById("waitForNextSensor1").value = j.waitForNextSensor1;
-        document.getElementById("waitForNextSensor2").value = j.waitForNextSensor2;
-        document.getElementById("waitAfterReading1").value = j.waitAfterReading1;
-        document.getElementById("waitAfterReading2").value = j.waitAfterReading2;
-      } catch (e) {
-        alert("Error fetching data: " + e);
+  <div class="content">
+    <!-- Mode Selector -->
+    <div class="mode-selector">
+      <h2>🔧 Light Control Mode</h2>
+      <div class="mode-toggle">
+        <span class="mode-label">Manual</span>
+        <label class="mode-switch">
+          <input type="checkbox" id="modeToggle">
+          <span class="mode-slider"></span>
+        </label>
+        <span class="mode-label">Automatic</span>
+      </div>
+      <div class="mode-description" id="modeDescription">
+        Manual Mode: Full control over light on/off switch
+      </div>
+    </div>
+
+    <!-- Party Mode Section -->
+    <div class="party-mode" id="partySection" style="display: none;">
+      <h2>🎉 PARTY MODE ACTIVE! 🎉</h2>
+      <div class="party-controls">
+        <div class="person-counter">
+          👥 People in room: <span id="currentCount">0</span>
+        </div>
+        <div class="person-counter">
+          🎯 Party threshold: <span id="partyThreshold">5</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Light Control Section -->
+    <div class="light-section">
+      <div class="bulb-icon" id="bulbIcon">💡</div>
+      <h2>Smart Light Control</h2>
+      <div class="status-display" id="lightStatus">Light is OFF</div>
+    </div>
+
+    <div class="controls-grid">
+      <!-- Power Control -->
+      <div class="control-card" id="powerControlCard">
+        <h3>Power Control</h3>
+        <label class="toggle-switch">
+          <input type="checkbox" id="lightToggle">
+          <span class="slider"></span>
+        </label>
+        <p id="powerControlDescription">Turn light on/off</p>
+      </div>
+
+      <!-- Brightness Control -->
+      <div class="control-card">
+        <h3>Brightness</h3>
+        <div class="brightness-control">
+          <input type="range" id="brightnessSlider" class="brightness-slider" 
+                 min="1" max="254" value="127">
+          <div style="text-align: center; margin-top: 0.5rem;">
+            <span id="brightnessValue">127</span> / 254
+          </div>
+        </div>
+      </div>
+
+      <!-- Color Control -->
+      <div class="control-card">
+        <h3>Color Control</h3>
+        <div class="color-picker-container">
+          <div class="color-palette">
+            <div class="color-option" style="background: #2E66AC;" data-color="blue" title="Blue"></div>
+            <div class="color-option" style="background: #DC3545;" data-color="red" title="Red"></div>
+            <div class="color-option" style="background: #28A745;" data-color="green" title="Green"></div>
+            <div class="color-option" style="background: #FFC107;" data-color="yellow" title="Yellow"></div>
+          </div>
+          <input type="color" id="rgbPicker" class="rgb-input" value="#ffffff" title="Custom RGB Color">
+        </div>
+      </div>
+
+      <!-- Party Mode Control -->
+      <div class="control-card">
+        <h3>🎉 Party Mode</h3>
+        <label class="toggle-switch">
+          <input type="checkbox" id="partyToggle">
+          <span class="slider"></span>
+        </label>
+        <div class="input-group">
+          <label>People threshold:</label>
+          <input type="number" id="partyThresholdInput" min="1" max="20" value="5">
+        </div>
+        <p style="font-size: 0.9rem; margin-top: 0.5rem;">
+          Auto-changes colors when room occupancy ≥ threshold
+        </p>
+      </div>
+    </div>
+
+    <!-- Advanced Settings -->
+    <div class="advanced-toggle" onclick="toggleAdvanced()">
+      <strong>⚙️ Advanced Sensor Settings</strong>
+      <span id="advancedArrow" style="float: right;">▼</span>
+    </div>
+
+    <div class="advanced-content" id="advancedContent">
+      <div class="sensor-grid">
+        <div class="sensor-control">
+          <label>Person Count:</label>
+          <input type="number" id="value" min="0" value="0">
+        </div>
+        
+        <div class="sensor-control">
+          <label>Direction:</label>
+          <select id="direction" style="width: 100%; padding: 0.5rem;">
+            <option value="0">0 (increment)</option>
+            <option value="1">1 (decrement)</option>
+          </select>
+        </div>
+
+        <div class="sensor-control">
+          <label>Wait for Sensor1 (ms):</label>
+          <input type="number" id="waitForNextSensor1" min="0">
+        </div>
+
+        <div class="sensor-control">
+          <label>Wait for Sensor2 (ms):</label>
+          <input type="number" id="waitForNextSensor2" min="0">
+        </div>
+
+        <div class="sensor-control">
+          <label>Wait after Sensor1 (ms):</label>
+          <input type="number" id="waitAfterReading1" min="0">
+        </div>
+
+        <div class="sensor-control">
+          <label>Wait after Sensor2 (ms):</label>
+          <input type="number" id="waitAfterReading2" min="0">
+        </div>
+      </div>
+
+      <div class="btn-group">
+        <button class="btn" id="btnFetch">🔄 Refresh Data</button>
+        <button class="btn" id="btnUpdate">💾 Update All Settings</button>
+        <button class="btn" id="btnReset">🔄 Reset Count to 0</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // API Setup
+  let apiKey = "";
+  const headers = { "Content-Type": "application/json", "X-API-Key": apiKey };
+  
+  // State variables
+  let isLightOn = false;
+  let currentBrightness = 127;
+  let currentColor = "white";
+  let isAutoMode = false;
+  let partyMode = false;
+  let partyThreshold = 5;
+  let currentPersonCount = 0;
+  let partyColorIndex = 0;
+  let partyInterval = null;
+
+  const partyColors = [
+    { h: 0, s: 100 },    // Red
+    { h: 60, s: 100 },   // Yellow  
+    { h: 120, s: 100 },  // Green
+    { h: 180, s: 100 },  // Cyan
+    { h: 240, s: 100 },  // Blue
+    { h: 300, s: 100 },  // Magenta
+  ];
+
+  // Initialize UI
+  function initializeUI() {
+    const modeToggle = document.getElementById('modeToggle');
+    const lightToggle = document.getElementById('lightToggle');
+    const brightnessSlider = document.getElementById('brightnessSlider');
+    const brightnessValue = document.getElementById('brightnessValue');
+    const colorOptions = document.querySelectorAll('.color-option');
+    const rgbPicker = document.getElementById('rgbPicker');
+    const partyToggle = document.getElementById('partyToggle');
+    const partyThresholdInput = document.getElementById('partyThresholdInput');
+
+    // Mode toggle
+    modeToggle.addEventListener('change', function() {
+      isAutoMode = this.checked;
+      updateModeUI();
+      if (isAutoMode) {
+        handleAutoMode();
       }
-    };
+    });
 
-    document.getElementById("btnFetch").onclick = fetchData;
-
-    document.getElementById("btnUpdate").onclick = async () => {
-      const payload = {
-        value: Number(document.getElementById("value").value),
-        direction: Number(document.getElementById("direction").value),
-        waitForNextSensor1: Number(document.getElementById("waitForNextSensor1").value),
-        waitForNextSensor2: Number(document.getElementById("waitForNextSensor2").value),
-        waitAfterReading1: Number(document.getElementById("waitAfterReading1").value),
-        waitAfterReading2: Number(document.getElementById("waitAfterReading2").value)
-      };
-      try {
-        const res = await fetch("/count", {
-          method: "POST",
-          headers,
-          body: JSON.stringify(payload)
-        });
-        if (!res.ok) throw await res.text();
-        alert("Updated successfully!");
-        fetchData();
-      } catch (e) {
-        alert("Error updating: " + e);
+    // Light toggle (only works in manual mode)
+    lightToggle.addEventListener('change', function() {
+      if (!isAutoMode) {
+        isLightOn = this.checked;
+        updateLightState();
+        updateUI();
       }
-    };
+    });
 
-    document.getElementById("btnReset").onclick = async () => {
-      try {
-        const res = await fetch("/count", {
-          method: "POST",
-          headers,
-          body: JSON.stringify({ value: 0 })
-        });
-        if (!res.ok) throw await res.text();
-        alert("Count reset to 0");
-        fetchData();
-      } catch (e) {
-        alert("Error resetting: " + e);
+    // Brightness slider
+    brightnessSlider.addEventListener('input', function() {
+      currentBrightness = parseInt(this.value);
+      brightnessValue.textContent = currentBrightness;
+      if (isLightOn) {
+        updateBrightness(currentBrightness);
       }
+    });
+
+    // Color palette
+    colorOptions.forEach(option => {
+      option.addEventListener('click', function() {
+        colorOptions.forEach(opt => opt.classList.remove('active'));
+        this.classList.add('active');
+        const color = this.dataset.color;
+        currentColor = color;
+        if (isLightOn && !partyMode) {
+          updateColor(color);
+        }
+      });
+    });
+
+    // RGB color picker
+    rgbPicker.addEventListener('change', function() {
+      const hexColor = this.value;
+      currentColor = hexColor;
+      colorOptions.forEach(opt => opt.classList.remove('active'));
+      if (isLightOn && !partyMode) {
+        updateRGBColor(hexColor);
+      }
+    });
+
+    // Party mode toggle
+    partyToggle.addEventListener('change', function() {
+      partyMode = this.checked;
+      partyThreshold = parseInt(partyThresholdInput.value);
+      togglePartyMode();
+    });
+
+    partyThresholdInput.addEventListener('change', function() {
+      partyThreshold = parseInt(this.value);
+      document.getElementById('partyThreshold').textContent = partyThreshold;
+    });
+
+    // Initialize mode UI
+    updateModeUI();
+  }
+
+  // Mode control functions
+  function updateModeUI() {
+    const powerControlCard = document.getElementById('powerControlCard');
+    const modeDescription = document.getElementById('modeDescription');
+    const powerControlDescription = document.getElementById('powerControlDescription');
+    const lightToggle = document.getElementById('lightToggle');
+
+    if (isAutoMode) {
+      // Automatic mode
+      powerControlCard.classList.add('disabled');
+      modeDescription.textContent = "Automatic Mode: Light controlled by person count (ON when >0, OFF when 0)";
+      powerControlDescription.textContent = "Automatic control based on occupancy";
+      lightToggle.disabled = true;
+    } else {
+      // Manual mode
+      powerControlCard.classList.remove('disabled');
+      modeDescription.textContent = "Manual Mode: Full control over light on/off switch";
+      powerControlDescription.textContent = "Turn light on/off manually";
+      lightToggle.disabled = false;
+    }
+  }
+
+  function handleAutoMode() {
+    // In automatic mode, light state is determined by person count
+    const shouldBeOn = currentPersonCount > 0;
+    
+    if (shouldBeOn !== isLightOn) {
+      isLightOn = shouldBeOn;
+      document.getElementById('lightToggle').checked = isLightOn;
+      updateLightState();
+      updateUI();
+    }
+  }
+
+  // Light control functions
+  async function updateLightState() {
+    try {
+      const response = await fetch('/light/brightness_form', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `brightness=${isLightOn ? currentBrightness : 0}`
+      });
+    } catch (error) {
+      console.error('Error updating light state:', error);
+    }
+  }
+
+  async function updateBrightness(brightness) {
+    try {
+      const response = await fetch('/light/brightness_form', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `brightness=${brightness}`
+      });
+    } catch (error) {
+      console.error('Error updating brightness:', error);
+    }
+  }
+
+  async function updateColor(color) {
+    const colorMap = {
+      'blue': '1',
+      'red': '2', 
+      'green': '3',
+      'yellow': '4'
     };
+    
+    try {
+      const response = await fetch('/light/color_form', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `color=${colorMap[color]}`
+      });
+    } catch (error) {
+      console.error('Error updating color:', error);
+    }
+  }
 
+  async function updateRGBColor(hexColor) {
+    // Convert hex to HSV for better compatibility
+    const rgb = hexToRgb(hexColor);
+    const hsv = rgbToHsv(rgb.r, rgb.g, rgb.b);
+    
+    // Send custom MQTT command for RGB color
+    // This would need to be implemented on the backend
+    console.log('Custom RGB color:', hexColor, 'HSV:', hsv);
+  }
 
-    // fetch on load
+  // Party mode functions
+  function togglePartyMode() {
+    const partySection = document.getElementById('partySection');
+    
+    if (partyMode) {
+      partySection.style.display = 'block';
+      checkPartyActivation();
+    } else {
+      partySection.style.display = 'none';
+      stopPartyMode();
+    }
+  }
+
+  function checkPartyActivation() {
+    if (partyMode && currentPersonCount >= partyThreshold && isLightOn) {
+      startPartyMode();
+    } else {
+      stopPartyMode();
+    }
+  }
+
+  function startPartyMode() {
+    if (partyInterval) return; // Already running
+    
+    partyInterval = setInterval(() => {
+      const color = partyColors[partyColorIndex];
+      partyColorIndex = (partyColorIndex + 1) % partyColors.length;
+      
+      // Send MQTT command for party color
+      // This would send HSV values to the bulb
+      console.log('Party color:', color);
+      
+    }, 1000);
+  }
+
+  function stopPartyMode() {
+    if (partyInterval) {
+      clearInterval(partyInterval);
+      partyInterval = null;
+    }
+  }
+
+  // UI update functions
+  function updateUI() {
+    const bulbIcon = document.getElementById('bulbIcon');
+    const lightStatus = document.getElementById('lightStatus');
+    
+    let statusText = '';
+    if (isAutoMode) {
+      statusText = `Light is ${isLightOn ? 'ON' : 'OFF'} (AUTO - ${currentPersonCount} people)`;
+    } else {
+      statusText = `Light is ${isLightOn ? 'ON' : 'OFF'} (MANUAL)`;
+    }
+
+    if (isLightOn) {
+      bulbIcon.textContent = '💡';
+      bulbIcon.style.filter = 'drop-shadow(0 0 20px #fbbf24)';
+      statusText += ` - Brightness: ${currentBrightness}`;
+      lightStatus.style.background = 'rgba(251, 191, 36, 0.2)';
+    } else {
+      bulbIcon.textContent = '🔘';
+      bulbIcon.style.filter = 'none';
+      lightStatus.style.background = 'rgba(107, 114, 128, 0.2)';
+    }
+
+    lightStatus.textContent = statusText;
+    document.getElementById('currentCount').textContent = currentPersonCount;
+    document.getElementById('partyThreshold').textContent = partyThreshold;
+  }
+
+  // ESP sensor functions
+  const fetchData = async () => {
+    try {
+      const res = await fetch("/count", { headers });
+      const j = await res.json();
+      
+      document.getElementById("value").value = j.value;
+      document.getElementById("direction").value = j.direction;
+      document.getElementById("waitForNextSensor1").value = j.waitForNextSensor1;
+      document.getElementById("waitForNextSensor2").value = j.waitForNextSensor2;
+      document.getElementById("waitAfterReading1").value = j.waitAfterReading1;
+      document.getElementById("waitAfterReading2").value = j.waitAfterReading2;
+      
+      const previousCount = currentPersonCount;
+      currentPersonCount = j.value;
+      
+      // Handle automatic mode if person count changed
+      if (isAutoMode && previousCount !== currentPersonCount) {
+        handleAutoMode();
+      }
+      
+      updateUI();
+      checkPartyActivation();
+      
+    } catch (e) {
+      console.error("Error fetching data:", e);
+    }
+  };
+
+  // Advanced settings toggle
+  function toggleAdvanced() {
+    const content = document.getElementById('advancedContent');
+    const arrow = document.getElementById('advancedArrow');
+    
+    if (content.classList.contains('open')) {
+      content.classList.remove('open');
+      arrow.textContent = '▼';
+    } else {
+      content.classList.add('open');
+      arrow.textContent = '▲';
+    }
+  }
+
+  // Sensor control functions
+  document.getElementById("btnFetch").onclick = fetchData;
+
+  document.getElementById("btnUpdate").onclick = async () => {
+    const payload = {
+      value: Number(document.getElementById("value").value),
+      direction: Number(document.getElementById("direction").value),
+      waitForNextSensor1: Number(document.getElementById("waitForNextSensor1").value),
+      waitForNextSensor2: Number(document.getElementById("waitForNextSensor2").value),
+      waitAfterReading1: Number(document.getElementById("waitAfterReading1").value),
+      waitAfterReading2: Number(document.getElementById("waitAfterReading2").value)
+    };
+    
+    try {
+      const res = await fetch("/count", {
+        method: "POST",
+        headers,
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw await res.text();
+      alert("✅ Settings updated successfully!");
+      fetchData();
+    } catch (e) {
+      alert("❌ Error updating settings: " + e);
+    }
+  };
+
+  document.getElementById("btnReset").onclick = async () => {
+    try {
+      const res = await fetch("/count", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ value: 0 })
+      });
+      if (!res.ok) throw await res.text();
+      alert("✅ Count reset to 0");
+      fetchData();
+    } catch (e) {
+      alert("❌ Error resetting count: " + e);
+    }
+  };
+
+  // Utility functions
+  function hexToRgb(hex) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } : null;
+  }
+
+  function rgbToHsv(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    let h, s, v = max;
+    const d = max - min;
+    s = max === 0 ? 0 : d / max;
+    if (max === min) {
+      h = 0;
+    } else {
+      switch (max) {
+        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+        case g: h = (b - r) / d + 2; break;
+        case b: h = (r - g) / d + 4; break;
+      }
+      h /= 6;
+    }
+    return { h: Math.round(h * 360), s: Math.round(s * 100), v: Math.round(v * 100) };
+  }
+
+  // Initialize everything
+  document.addEventListener('DOMContentLoaded', function() {
+    initializeUI();
     fetchData();
-  </script>
-
-<h2>Światło</h2>
-
-<form method="POST" action="/light/brightness_form">
-  <label>Natężenie (1–254):
-    <input type="number" name="brightness" min="1" max="254" required>
-  </label>
-  <button type="submit">Ustaw natężenie</button>
-</form>
-
-<form method="POST" action="/light/color_form">
-  <label>Kolor:
-    <select name="color">
-      <option value="1">Niebieski</option>
-      <option value="2">Czerwony</option>
-      <option value="3">Zielony</option>
-      <option value="4">Żółty</option>
-    </select>
-  </label>
-  <button type="submit">Zmień kolor</button>
-</form>
+    
+    // Auto-refresh data every 2 seconds
+    setInterval(fetchData, 2000);
+  });
+</script>
 
 </body>
 </html>

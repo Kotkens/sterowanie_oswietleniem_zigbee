@@ -9,11 +9,11 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
   
 # ——— your existing config ———
-ESP_IP     = os.environ.get("ESP_IP", "192.168.1.37")
+ESP_IP     = os.environ.get("ESP_IP", "192.168.0.37")
 ESP_PORT   = int(os.environ.get("ESP_PORT", 5554))
 ESP_URL    = f"http://{ESP_IP}:{ESP_PORT}/var"
 
-API_KEY    = os.environ.get("MY_API_KEY", "jeffbezos1234")
+API_KEY    = os.environ.get("MY_API_KEY", "1234")
 
 MQTT_BROKER = os.environ.get("MQTT_BROKER", "localhost")
 MQTT_PORT   = int(os.environ.get("MQTT_PORT", 1883))
