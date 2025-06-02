@@ -507,7 +507,6 @@
             <div class="color-option" style="background: #28A745;" data-color="green" title="Green"></div>
             <div class="color-option" style="background: #FFC107;" data-color="yellow" title="Yellow"></div>
           </div>
-          <input type="color" id="rgbPicker" class="rgb-input" value="#ffffff" title="Custom RGB Color">
         </div>
       </div>
 
@@ -623,6 +622,24 @@
         handleAutoMode();
       }
     });
+
+    async function updateLightState() {
+  try {
+    const formData = new URLSearchParams();
+    formData.append("state", isLightOn ? "ON" : "OFF");
+
+    const response = await fetch('/light/power', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: formData.toString()
+    });
+  } catch (error) {
+    console.error('Error toggling light:', error);
+  }
+}
+
+
+
 
     // Light toggle (only works in manual mode)
     lightToggle.addEventListener('change', function() {

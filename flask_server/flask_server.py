@@ -9,7 +9,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
   
 # ——— your existing config ———
-ESP_IP     = os.environ.get("ESP_IP", "192.168.0.37")
+ESP_IP     = os.environ.get("ESP_IP", "192.168.1.37") # 192.168.0.37
 ESP_PORT   = int(os.environ.get("ESP_PORT", 5554))
 ESP_URL    = f"http://{ESP_IP}:{ESP_PORT}/var"
 
@@ -25,7 +25,7 @@ limiter = Limiter(app=app, key_func=get_remote_address, default_limits=["20 per 
 # ——— MQTT init ———
 def init_mqtt():
     client = mqtt.Client()
-    client.connect(MQTT_BROKER, MQTT_PORT)
+    client.connect("192.168.1.30", 1883) # zmienione z palca MQTT_BROKER!!!!!!!!!!!!!!!
     client.loop_start()
     return client
 
@@ -168,6 +168,17 @@ def color_form():
         return "Brak koloru", 400
     zmiana_koloru_swiatla(color)
     return f"Zmieniono kolor na opcję {color}. <a href='/'>Powrót</a>"
+
+@app.route("/light/power", methods=["POST"])
+def toggle_light_power():
+    state = request.form.get("state")
+    if state not in ["ON", "OFF"]:
+        return "Nieprawidłowy stan", 400
+    zmien_stan_swiatla(state)
+    return f"Żarówka ustawiona na {state}", 200
+
+
+
 
 if __name__ == "__main__":
     # in prod, set debug=False
