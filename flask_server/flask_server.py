@@ -9,6 +9,8 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
   
 # ——— your existing config ———
+manual_light_state = None
+
 ESP_IP     = os.environ.get("ESP_IP", "192.168.1.37") # 192.168.0.37
 ESP_PORT   = int(os.environ.get("ESP_PORT", 5554))
 ESP_URL    = f"http://{ESP_IP}:{ESP_PORT}/var"
@@ -25,7 +27,7 @@ limiter = Limiter(app=app, key_func=get_remote_address, default_limits=["20 per 
 # ——— MQTT init ———
 def init_mqtt():
     client = mqtt.Client()
-    client.connect("192.168.1.30", 1883) # zmienione z palca MQTT_BROKER!!!!!!!!!!!!!!!
+    client.connect("192.168.1.20", 1883) # zmienione z palca MQTT_BROKER!!!!!!!!!!!!!!!
     client.loop_start()
     return client
 
@@ -35,7 +37,16 @@ latest_value = 0
 value_lock   = threading.Lock()
 
 def update_lamp(value):
-    state = "ON" if isinstance(value, (int, float)) and value > 0 else "OFF"
+    """Aktualizuje stan lampy w zależności od trybu"""
+    global manual_light_state
+    
+    # Jeśli jest ustawiony tryb manualny, używaj tego stanu
+    if manual_light_state is not None:
+        state = "ON" if manual_light_state else "OFF"
+    else:
+        # Tryb automatyczny - bazuj na wartości sensora
+        state = "ON" if isinstance(value, (int, float)) and value > 0 else "OFF"
+    
     mqtt_client.publish(MQTT_TOPIC, json.dumps({"state": state}))
     
 # --------------------------------- dodanie sterowanie zarowka 21.05.2025
@@ -88,7 +99,7 @@ def index():
 # ——— GET returns full JSON from ESP ———
 @app.route("/count", methods=["GET"])
 @limiter.limit("20 per second")
-@require_api_key
+# @require_api_key
 def get_count():
     resp = requests.get(ESP_URL)
     resp.raise_for_status()
@@ -97,7 +108,7 @@ def get_count():
 # ——— POST can accept any ESP keys ———
 @app.route("/count", methods=["POST"])
 @limiter.limit("20 per second")
-@require_api_key
+# @require_api_key
 def set_count():
     data = request.get_json()
     if not data:
@@ -141,8 +152,9 @@ def poll_esp():
             with value_lock:
                 latest_value = value
 
-            # always publish, even if unchanged
-            update_lamp(value)
+            # Wywołaj update_lamp tylko w trybie automatycznym
+            if manual_light_state is None:
+                update_lamp(value)
 
         except Exception as e:
             app.logger.error(f"Poll error: {e}")
@@ -152,6 +164,25 @@ def poll_esp():
 # start polling thread
 poll_thread = threading.Thread(target=poll_esp, daemon=True)
 poll_thread.start()
+
+@app.route("/light/mode", methods=["POST"])
+def set_light_mode():
+    """Ustawia tryb sterowania lampą"""
+    global manual_light_state
+    
+    data = request.get_json()
+    mode = data.get("mode")  # "auto", "manual"
+    
+    if mode == "auto":
+        manual_light_state = None
+        # W trybie auto, od razu zastosuj stan bazujący na aktualnej wartości sensora
+        update_lamp(latest_value)
+    elif mode == "manual":
+        # Pozostaw aktualny stan, ale przełącz na tryb manualny
+        current_state = latest_value > 0 if manual_light_state is None else manual_light_state
+        manual_light_state = current_state
+    
+    return jsonify({"mode": mode, "manual_state": manual_light_state}), 200
 
 @app.route("/light/brightness_form", methods=["POST"])
 def brightness_form():
@@ -169,15 +200,40 @@ def color_form():
     zmiana_koloru_swiatla(color)
     return f"Zmieniono kolor na opcję {color}. <a href='/'>Powrót</a>"
 
+@app.route("/light/status", methods=["GET"])
+def get_light_status():
+    """Zwraca aktualny stan lampy i tryb sterowania"""
+    mode = "manual" if manual_light_state is not None else "auto"
+    
+    if manual_light_state is not None:
+        light_on = manual_light_state
+    else:
+        light_on = latest_value > 0
+    
+    return jsonify({
+        "mode": mode,
+        "light_on": light_on,
+        "person_count": latest_value,
+        "manual_state": manual_light_state
+    }), 200
+
+
 @app.route("/light/power", methods=["POST"])
 def toggle_light_power():
+    """Sterowanie stanem lampy - działa tylko w trybie manualnym"""
+    global manual_light_state
+    
     state = request.form.get("state")
     if state not in ["ON", "OFF"]:
         return "Nieprawidłowy stan", 400
+    
+    # Ustaw tryb manualny i odpowiedni stan
+    manual_light_state = (state == "ON")
     zmien_stan_swiatla(state)
-    return f"Żarówka ustawiona na {state}", 200
+    
+    return f"Żarówka ustawiona na {state} (tryb manualny)", 200
 
-
+    
 
 
 if __name__ == "__main__":

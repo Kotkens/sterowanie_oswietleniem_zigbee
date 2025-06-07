@@ -579,228 +579,170 @@
 </div>
 
 <script>
-  // API Setup
+  // ===== GLOBAL STATE =====
   let apiKey = "";
   const headers = { "Content-Type": "application/json", "X-API-Key": apiKey };
-  
-  // State variables
-  let isLightOn = false;
-  let currentBrightness = 127;
-  let currentColor = "white";
-  let isAutoMode = false;
-  let partyMode = false;
-  let partyThreshold = 5;
+
+  let isLightOn          = false;
+  let isAutoMode         = false;
+  let currentBrightness  = 127;
+  let currentColor       = "white";
   let currentPersonCount = 0;
-  let partyColorIndex = 0;
-  let partyInterval = null;
+
+  // PARTY‐MODE / ALARM STATE
+  let partyMode       = false;
+  let partyThreshold  = 5;
+  let alarmActive     = false;
+  let preAlarmColor   = "white";
+  let blinkIntervalId = null;
 
   const partyColors = [
-    { h: 0, s: 100 },    // Red
-    { h: 60, s: 100 },   // Yellow  
-    { h: 120, s: 100 },  // Green
-    { h: 180, s: 100 },  // Cyan
-    { h: 240, s: 100 },  // Blue
-    { h: 300, s: 100 },  // Magenta
+    { h: 0,   s:100 },  // red
+    { h: 60,  s:100 },  // yellow
+    { h:120,  s:100 },  // green
+    { h:180,  s:100 },  // cyan
+    { h:240,  s:100 },  // blue
+    { h:300,  s:100 },  // magenta
   ];
 
-  // Initialize UI
+  // ===== INITIALIZATION =====
   function initializeUI() {
-    const modeToggle = document.getElementById('modeToggle');
-    const lightToggle = document.getElementById('lightToggle');
-    const brightnessSlider = document.getElementById('brightnessSlider');
-    const brightnessValue = document.getElementById('brightnessValue');
-    const colorOptions = document.querySelectorAll('.color-option');
-    const rgbPicker = document.getElementById('rgbPicker');
-    const partyToggle = document.getElementById('partyToggle');
-    const partyThresholdInput = document.getElementById('partyThresholdInput');
+    // elementy
+    const modeToggle         = document.getElementById('modeToggle');
+    const lightToggle        = document.getElementById('lightToggle');
+    const brightnessSlider   = document.getElementById('brightnessSlider');
+    const brightnessValue    = document.getElementById('brightnessValue');
+    const colorOptions       = document.querySelectorAll('.color-option');
+    const partyToggle        = document.getElementById('partyToggle');
+    const partyThresholdInput= document.getElementById('partyThresholdInput');
 
-    // Mode toggle
-    modeToggle.addEventListener('change', function() {
-      isAutoMode = this.checked;
+    // tryb manual/auto
+    modeToggle.addEventListener('change', () => {
+      isAutoMode = modeToggle.checked;
+      setLightMode(isAutoMode ? 'auto' : 'manual');
       updateModeUI();
-      if (isAutoMode) {
-        handleAutoMode();
-      }
+      if (isAutoMode) handleAutoMode();
     });
 
-    async function updateLightState() {
-  try {
-    const formData = new URLSearchParams();
-    formData.append("state", isLightOn ? "ON" : "OFF");
-
-    const response = await fetch('/light/power', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: formData.toString()
-    });
-  } catch (error) {
-    console.error('Error toggling light:', error);
-  }
-}
-
-
-
-
-    // Light toggle (only works in manual mode)
-    lightToggle.addEventListener('change', function() {
+    // włącz/wyłącz lampę (manual)
+    lightToggle.addEventListener('change', () => {
       if (!isAutoMode) {
-        isLightOn = this.checked;
+        isLightOn = lightToggle.checked;
         updateLightState();
         updateUI();
       }
     });
 
-    // Brightness slider
-    brightnessSlider.addEventListener('input', function() {
-      currentBrightness = parseInt(this.value);
+    // suwak jasności
+    brightnessSlider.addEventListener('input', () => {
+      currentBrightness = +brightnessSlider.value;
       brightnessValue.textContent = currentBrightness;
-      if (isLightOn) {
-        updateBrightness(currentBrightness);
-      }
+      if (isLightOn) updateBrightness(currentBrightness);
     });
 
-    // Color palette
-    colorOptions.forEach(option => {
-      option.addEventListener('click', function() {
-        colorOptions.forEach(opt => opt.classList.remove('active'));
-        this.classList.add('active');
-        const color = this.dataset.color;
-        currentColor = color;
-        if (isLightOn && !partyMode) {
-          updateColor(color);
-        }
+    // paleta kolorów
+    colorOptions.forEach(opt => {
+      opt.addEventListener('click', () => {
+        colorOptions.forEach(o => o.classList.remove('active'));
+        opt.classList.add('active');
+        currentColor = opt.dataset.color;
+        if (isLightOn && !partyMode) updateColor(currentColor);
       });
     });
 
-    // RGB color picker
-    rgbPicker.addEventListener('change', function() {
-      const hexColor = this.value;
-      currentColor = hexColor;
-      colorOptions.forEach(opt => opt.classList.remove('active'));
-      if (isLightOn && !partyMode) {
-        updateRGBColor(hexColor);
-      }
-    });
-
-    // Party mode toggle
-    partyToggle.addEventListener('change', function() {
-      partyMode = this.checked;
-      partyThreshold = parseInt(partyThresholdInput.value);
+    // party‐mode toggle + threshold
+    partyToggle.addEventListener('change', () => {
+      partyMode      = partyToggle.checked;
+      partyThreshold = +partyThresholdInput.value;
       togglePartyMode();
     });
-
-    partyThresholdInput.addEventListener('change', function() {
-      partyThreshold = parseInt(this.value);
+    partyThresholdInput.addEventListener('change', () => {
+      partyThreshold = +partyThresholdInput.value;
       document.getElementById('partyThreshold').textContent = partyThreshold;
+      if (partyMode) checkPartyActivation();
     });
 
-    // Initialize mode UI
+    // pierwsze narysowanie UI
     updateModeUI();
+    updateUI();
   }
 
-  // Mode control functions
-  function updateModeUI() {
-    const powerControlCard = document.getElementById('powerControlCard');
-    const modeDescription = document.getElementById('modeDescription');
-    const powerControlDescription = document.getElementById('powerControlDescription');
-    const lightToggle = document.getElementById('lightToggle');
-
-    if (isAutoMode) {
-      // Automatic mode
-      powerControlCard.classList.add('disabled');
-      modeDescription.textContent = "Automatic Mode: Light controlled by person count (ON when >0, OFF when 0)";
-      powerControlDescription.textContent = "Automatic control based on occupancy";
-      lightToggle.disabled = true;
-    } else {
-      // Manual mode
-      powerControlCard.classList.remove('disabled');
-      modeDescription.textContent = "Manual Mode: Full control over light on/off switch";
-      powerControlDescription.textContent = "Turn light on/off manually";
-      lightToggle.disabled = false;
-    }
-  }
-
-  function handleAutoMode() {
-    // In automatic mode, light state is determined by person count
-    const shouldBeOn = currentPersonCount > 0;
-    
-    if (shouldBeOn !== isLightOn) {
-      isLightOn = shouldBeOn;
-      document.getElementById('lightToggle').checked = isLightOn;
-      updateLightState();
-      updateUI();
-    }
-  }
-
-  // Light control functions
+  // ===== FLASK API CALLS =====
   async function updateLightState() {
-    try {
-      const response = await fetch('/light/brightness_form', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: `brightness=${isLightOn ? currentBrightness : 0}`
-      });
-    } catch (error) {
-      console.error('Error updating light state:', error);
-    }
+    const form = new URLSearchParams({ state: isLightOn ? 'ON' : 'OFF' });
+    await fetch('/light/power', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/x-www-form-urlencoded' },
+      body: form.toString()
+    });
+  }
+
+  async function setLightMode(mode) {
+    const res = await fetch('/light/mode', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json' },
+      body: JSON.stringify({ mode })
+    });
+    await res.json();
   }
 
   async function updateBrightness(brightness) {
-    try {
-      const response = await fetch('/light/brightness_form', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: `brightness=${brightness}`
-      });
-    } catch (error) {
-      console.error('Error updating brightness:', error);
-    }
+    const form = new URLSearchParams({ brightness: String(brightness) });
+    await fetch('/light/brightness_form', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/x-www-form-urlencoded' },
+      body: form.toString()
+    });
   }
 
   async function updateColor(color) {
-    const colorMap = {
-      'blue': '1',
-      'red': '2', 
-      'green': '3',
-      'yellow': '4'
-    };
-    
+    const colorMap = { blue:'1', red:'2', green:'3', yellow:'4' };
+    const form = new URLSearchParams({ color: colorMap[color] });
+    await fetch('/light/color_form', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/x-www-form-urlencoded' },
+      body: form.toString()
+    });
+  }
+
+  async function fetchLightStatus() {
     try {
-      const response = await fetch('/light/color_form', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: `color=${colorMap[color]}`
-      });
-    } catch (error) {
-      console.error('Error updating color:', error);
+      const res    = await fetch('/light/status');
+      const st     = await res.json();
+      isLightOn          = st.light_on;
+      isAutoMode         = st.mode === 'auto';
+      currentPersonCount = st.person_count;
+      document.getElementById('lightToggle').checked = isLightOn;
+      document.getElementById('modeToggle').checked  = isAutoMode;
+      updateUI();
+      updateModeUI();
+    } catch(e) {
+      console.error('fetchLightStatus:', e);
     }
   }
 
-  async function updateRGBColor(hexColor) {
-    // Convert hex to HSV for better compatibility
-    const rgb = hexToRgb(hexColor);
-    const hsv = rgbToHsv(rgb.r, rgb.g, rgb.b);
-    
-    // Send custom MQTT command for RGB color
-    // This would need to be implemented on the backend
-    console.log('Custom RGB color:', hexColor, 'HSV:', hsv);
-  }
-
-  // Party mode functions
-  function togglePartyMode() {
-    const partySection = document.getElementById('partySection');
-    
-    if (partyMode) {
-      partySection.style.display = 'block';
+  // ===== ESP SENSOR CALL =====
+  async function fetchData() {
+    try {
+      const res = await fetch('/count', { headers });
+      const j   = await res.json();
+      currentPersonCount = j.value;
+      updateUI();
       checkPartyActivation();
-    } else {
-      partySection.style.display = 'none';
-      stopPartyMode();
+    } catch(e) {
+      console.error('fetchData:', e);
     }
+  }
+
+  // ===== PARTY‐MODE / ALARM =====
+  function togglePartyMode() {
+    document.getElementById('partySection').style.display = partyMode ? 'block' : 'none';
+    if (!partyMode) stopPartyMode();
+    else checkPartyActivation();
   }
 
   function checkPartyActivation() {
-    if (partyMode && currentPersonCount >= partyThreshold && isLightOn) {
+    if (partyMode && isLightOn && currentPersonCount >= partyThreshold) {
       startPartyMode();
     } else {
       stopPartyMode();
@@ -808,177 +750,79 @@
   }
 
   function startPartyMode() {
-    if (partyInterval) return; // Already running
-    
-    partyInterval = setInterval(() => {
-      const color = partyColors[partyColorIndex];
-      partyColorIndex = (partyColorIndex + 1) % partyColors.length;
-      
-      // Send MQTT command for party color
-      // This would send HSV values to the bulb
-      console.log('Party color:', color);
-      
-    }, 1000);
-  }
+  if (alarmActive) return;             // już działa – nie uruchamiaj ponownie
+  alarmActive   = true;
+  preAlarmColor = currentColor;        // zapamiętaj dotychczasowy kolor
+
+  // pobieramy z HTML wszystkie opcje kolorów (definiowane w .color-option[data-color])
+  const colors = Array.from(
+    document.querySelectorAll('.color-option')
+  ).map(el => el.dataset.color);      // → ['blue','red','green','yellow']
+
+  let idx = 0;
+  blinkIntervalId = setInterval(() => {
+    const nextColor = colors[idx];
+    updateColor(nextColor);             // wyślij do Flask → MQTT
+    idx = (idx + 1) % colors.length;    // kolejny indeks (cyklicznie)
+  }, 500);                              // co 500 ms
+}
 
   function stopPartyMode() {
-    if (partyInterval) {
-      clearInterval(partyInterval);
-      partyInterval = null;
+    if (!alarmActive) return;
+    alarmActive = false;
+    clearInterval(blinkIntervalId);
+    updateColor(preAlarmColor);
+  }
+
+  // ===== UI UPDATES =====
+  function updateModeUI() {
+    const card     = document.getElementById('powerControlCard');
+    const toggle   = document.getElementById('modeToggle');
+    const desc     = document.getElementById('modeDescription');
+    const lightT   = document.getElementById('lightToggle');
+
+    if (isAutoMode) {
+      card.classList.add('disabled');
+      desc.textContent = `AUTO: ${currentPersonCount} people → ${isLightOn?'ON':'OFF'}`;
+      lightT.disabled = true;
+    } else {
+      card.classList.remove('disabled');
+      desc.textContent = `MANUAL`;
+      lightT.disabled = false;
     }
   }
 
-  // UI update functions
   function updateUI() {
+    document.getElementById('brightnessValue').textContent    = currentBrightness;
+    document.getElementById('currentCount').textContent      = currentPersonCount;
+    document.getElementById('partyThreshold').textContent    = partyThreshold;
     const bulbIcon = document.getElementById('bulbIcon');
-    const lightStatus = document.getElementById('lightStatus');
-    
-    let statusText = '';
-    if (isAutoMode) {
-      statusText = `Light is ${isLightOn ? 'ON' : 'OFF'} (AUTO - ${currentPersonCount} people)`;
-    } else {
-      statusText = `Light is ${isLightOn ? 'ON' : 'OFF'} (MANUAL)`;
-    }
+    const status   = document.getElementById('lightStatus');
 
     if (isLightOn) {
       bulbIcon.textContent = '💡';
       bulbIcon.style.filter = 'drop-shadow(0 0 20px #fbbf24)';
-      statusText += ` - Brightness: ${currentBrightness}`;
-      lightStatus.style.background = 'rgba(251, 191, 36, 0.2)';
+      status.textContent = `ON – Brightness ${currentBrightness}`;
     } else {
       bulbIcon.textContent = '🔘';
       bulbIcon.style.filter = 'none';
-      lightStatus.style.background = 'rgba(107, 114, 128, 0.2)';
-    }
-
-    lightStatus.textContent = statusText;
-    document.getElementById('currentCount').textContent = currentPersonCount;
-    document.getElementById('partyThreshold').textContent = partyThreshold;
-  }
-
-  // ESP sensor functions
-  const fetchData = async () => {
-    try {
-      const res = await fetch("/count", { headers });
-      const j = await res.json();
-      
-      document.getElementById("value").value = j.value;
-      document.getElementById("direction").value = j.direction;
-      document.getElementById("waitForNextSensor1").value = j.waitForNextSensor1;
-      document.getElementById("waitForNextSensor2").value = j.waitForNextSensor2;
-      document.getElementById("waitAfterReading1").value = j.waitAfterReading1;
-      document.getElementById("waitAfterReading2").value = j.waitAfterReading2;
-      
-      const previousCount = currentPersonCount;
-      currentPersonCount = j.value;
-      
-      // Handle automatic mode if person count changed
-      if (isAutoMode && previousCount !== currentPersonCount) {
-        handleAutoMode();
-      }
-      
-      updateUI();
-      checkPartyActivation();
-      
-    } catch (e) {
-      console.error("Error fetching data:", e);
-    }
-  };
-
-  // Advanced settings toggle
-  function toggleAdvanced() {
-    const content = document.getElementById('advancedContent');
-    const arrow = document.getElementById('advancedArrow');
-    
-    if (content.classList.contains('open')) {
-      content.classList.remove('open');
-      arrow.textContent = '▼';
-    } else {
-      content.classList.add('open');
-      arrow.textContent = '▲';
+      status.textContent = `OFF`;
     }
   }
 
-  // Sensor control functions
-  document.getElementById("btnFetch").onclick = fetchData;
-
-  document.getElementById("btnUpdate").onclick = async () => {
-    const payload = {
-      value: Number(document.getElementById("value").value),
-      direction: Number(document.getElementById("direction").value),
-      waitForNextSensor1: Number(document.getElementById("waitForNextSensor1").value),
-      waitForNextSensor2: Number(document.getElementById("waitForNextSensor2").value),
-      waitAfterReading1: Number(document.getElementById("waitAfterReading1").value),
-      waitAfterReading2: Number(document.getElementById("waitAfterReading2").value)
-    };
-    
-    try {
-      const res = await fetch("/count", {
-        method: "POST",
-        headers,
-        body: JSON.stringify(payload)
-      });
-      if (!res.ok) throw await res.text();
-      alert("✅ Settings updated successfully!");
-      fetchData();
-    } catch (e) {
-      alert("❌ Error updating settings: " + e);
-    }
-  };
-
-  document.getElementById("btnReset").onclick = async () => {
-    try {
-      const res = await fetch("/count", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({ value: 0 })
-      });
-      if (!res.ok) throw await res.text();
-      alert("✅ Count reset to 0");
-      fetchData();
-    } catch (e) {
-      alert("❌ Error resetting count: " + e);
-    }
-  };
-
-  // Utility functions
-  function hexToRgb(hex) {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result ? {
-      r: parseInt(result[1], 16),
-      g: parseInt(result[2], 16),
-      b: parseInt(result[3], 16)
-    } : null;
-  }
-
-  function rgbToHsv(r, g, b) {
-    r /= 255; g /= 255; b /= 255;
-    const max = Math.max(r, g, b), min = Math.min(r, g, b);
-    let h, s, v = max;
-    const d = max - min;
-    s = max === 0 ? 0 : d / max;
-    if (max === min) {
-      h = 0;
-    } else {
-      switch (max) {
-        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-        case g: h = (b - r) / d + 2; break;
-        case b: h = (r - g) / d + 4; break;
-      }
-      h /= 6;
-    }
-    return { h: Math.round(h * 360), s: Math.round(s * 100), v: Math.round(v * 100) };
-  }
-
-  // Initialize everything
-  document.addEventListener('DOMContentLoaded', function() {
+  // ===== BOOTSTRAP EVERYTHING =====
+  document.addEventListener('DOMContentLoaded', () => {
     initializeUI();
     fetchData();
-    
-    // Auto-refresh data every 2 seconds
-    setInterval(fetchData, 2000);
+    fetchLightStatus();
+    // cykliczne odświeżanie
+    setInterval(() => {
+      fetchData();
+      fetchLightStatus();
+    }, 2000);
   });
 </script>
+
 
 </body>
 </html>

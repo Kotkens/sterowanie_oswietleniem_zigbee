@@ -5,9 +5,9 @@
 
 StaticJsonDocument<256> jsonDoc;
 
-const char* ssid = "Orange_Swiatlowod_0D10"; // UPC3562988
-const char* password = "Gcjpq5eXadQQZJVWC7"; // Sowelo8888
-const char* serverIP = "192.168.1.37"; // 192.168.0.36
+const char* ssid = "UPC3562988";
+const char* password = "Sowelo8888";
+const char* serverIP = "192.168.0.36";
 const int serverPort = 5554;
 ESP8266WebServer server(serverPort);
 
@@ -158,4 +158,3 @@ void loop() {
   }
 
   }
-
